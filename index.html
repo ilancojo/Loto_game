@@ -1,0 +1,80 @@
+﻿<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>משחק לוטו - תרגיל 4</title>
+
+    <!-- CSS file for all styling (Grid/Flex + Media Queries) -->
+    <link rel="stylesheet" href="/css/styles.css" />
+</head>
+<body>
+    <header class="app-header">
+        <h1 class="app-title">הגרלת לוטו (תרגיל 4)</h1>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <span class="status-label">כסף נוכחי:</span>
+                <span id="moneyValue" class="status-value">—</span>
+            </div>
+
+            <div class="status-item">
+                <span class="status-label">עלות הגרלה:</span>
+                <span id="ticketCostValue" class="status-value">—</span>
+            </div>
+
+            <div class="status-item">
+                <span class="status-label">סבב:</span>
+                <span id="roundValue" class="status-value">—</span>
+            </div>
+        </div>
+
+        <p id="message" class="message" aria-live="polite"></p>
+    </header>
+
+    <main class="layout">
+        <section class="panel panel--strong">
+            <h2 class="panel-title">מספר חזק (בחר 1 בלבד)</h2>
+            <div id="strongBoard" class="board board--strong" aria-label="לוח מספר חזק"></div>
+
+            <div class="picked">
+                <span class="picked-label">בחרת מספר חזק:</span>
+                <span id="pickedStrong" class="picked-value">—</span>
+            </div>
+        </section>
+
+        <section class="panel panel--numbers">
+            <h2 class="panel-title">בחר 6 מספרים שונים (1–37)</h2>
+            <div id="numbersBoard" class="board board--numbers" aria-label="לוח מספרים"></div>
+
+            <div class="picked">
+                <span class="picked-label">המספרים שבחרת:</span>
+                <span id="pickedNumbers" class="picked-value">—</span>
+            </div>
+        </section>
+
+        <section class="panel panel--actions">
+            <h2 class="panel-title">פעולות</h2>
+
+            <div class="actions">
+                <button id="checkBtn" class="btn btn--primary" type="button">בדיקת הגרלה</button>
+                <button id="finishBtn" class="btn" type="button">סיים הגרלות</button>
+            </div>
+
+            <div class="result-box">
+                <h3 class="result-title">תוצאות ההגרלה האחרונה</h3>
+                <div id="result" class="result" aria-live="polite">
+                    עדיין אין תוצאות — בצע בדיקת הגרלה.
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="app-footer">
+        <small>נבנה ב־HTML + CSS (Grid/Flex + Media Queries) + JavaScript</small>
+    </footer>
+
+    <!-- JavaScript for the game logic -->
+    <script src="/js/app.js"></script>
+</body>
+</html>

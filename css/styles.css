@@ -1,0 +1,274 @@
+﻿
+*{
+
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0; /* Remove default browser margins */
+    font-family: system-ui, Arial, sans-serif;
+    line-height: 1.4;
+    background: #f6f7fb;
+    color: #1f2937;
+}
+
+/* --- Header --- */
+.app-header {
+    padding: 16px;
+    background: #ffffff;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.app-title {
+    margin: 0 0 12px 0;
+    font-size: 1.4rem;
+}
+
+.status-bar {
+    display: flex; /* Flex: place status items in a row */
+    flex-wrap: wrap; /* Wrap on smaller screens */
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.status-item {
+    display: flex;
+    gap: 6px;
+    background: #f3f4f6;
+    padding: 6px 10px;
+    border-radius: 10px;
+}
+
+.status-label {
+    opacity: 0.8;
+}
+
+.status-value {
+    font-weight: 700;
+}
+
+.message {
+    margin: 0;
+    padding: 10px 12px;
+    background: #0f172a;
+    color: #ffffff;
+    border-radius: 12px;
+}
+
+/* --- Main layout (Grid) --- */
+.layout {
+    display: grid; /* Grid: primary page layout */
+    grid-template-columns: 1fr; /* Mobile-first: single column */
+    gap: 14px;
+    padding: 14px;
+}
+
+/* --- Panels --- */
+.panel {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px;
+}
+
+.panel-title {
+    margin: 0 0 10px 0;
+    font-size: 1.1rem;
+}
+
+/* --- Boards (Grid) --- */
+.board {
+    display: grid; /* Grid: the clickable number boards */
+    gap: 8px;
+}
+
+.board--strong {
+    grid-template-columns: repeat(7, 1fr);
+}
+
+.board--numbers {
+    grid-template-columns: repeat(6, 1fr); /* Mobile default: 6 columns */
+}
+
+/* --- Cell buttons --- */
+.cell {
+    appearance: none;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 0;
+    font-weight: 700;
+    cursor: pointer;
+    user-select: none;
+}
+
+    .cell:hover {
+        border-color: #111827;
+    }
+
+    .cell.is-selected {
+        background: #111827;
+        color: #ffffff;
+        border-color: #111827;
+    }
+
+    .cell:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+    }
+
+/* --- Picked values --- */
+.picked {
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.picked-label {
+    opacity: 0.8;
+}
+
+.picked-value {
+    font-weight: 700;
+}
+
+/* --- Actions --- */
+.actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.btn {
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 12px;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+    .btn:hover {
+        border-color: #111827;
+    }
+
+.btn--primary {
+    background: #111827;
+    color: #ffffff;
+    border-color: #111827;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- Result area --- */
+.result-box {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.result-title {
+    margin: 0 0 10px 0;
+    font-size: 1rem;
+}
+
+.result {
+    background: #f3f4f6;
+    border-radius: 12px;
+    padding: 12px;
+}
+
+.result-row {
+    display: grid; /* Grid: label + 2 values */
+    grid-template-columns: 110px 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+    .result-row:last-child {
+        margin-bottom: 0;
+    }
+
+.result-label {
+    opacity: 0.8;
+}
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 38px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    border: 1px solid #d1d5db;
+    background: #ffffff;
+    font-weight: 700;
+}
+
+    .chip.hit {
+        background: #111827;
+        color: #ffffff;
+        border-color: #111827;
+    }
+
+    .chip.miss {
+        opacity: 0.75;
+    }
+
+/* --- Footer --- */
+.app-footer {
+    padding: 14px;
+    text-align: center;
+    color: #6b7280;
+}
+
+/* --- Responsive rules (Media Queries) --- */
+
+/* Tablet: increase columns for the main numbers board */
+@media screen and (min-width: 720px) {
+    .layout {
+        grid-template-columns: 1fr 1fr; /* Two columns layout */
+        align-items: start;
+    }
+
+    .panel--numbers {
+        grid-column: 1 / -1; /* Make numbers panel full width on tablet */
+    }
+
+    .board--numbers {
+        grid-template-columns: repeat(9, 1fr);
+    }
+
+    .result-row {
+        grid-template-columns: 140px 1fr;
+    }
+}
+
+/* Desktop: 3-column layout */
+@media screen and (min-width: 1024px) {
+    .layout {
+        grid-template-columns: 320px 1fr 360px;
+    }
+
+    .panel--numbers {
+        grid-column: auto; /* Back to normal flow */
+    }
+
+    .board--numbers {
+        grid-template-columns: repeat(10, 1fr);
+    }
+}
