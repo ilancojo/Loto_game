@@ -1,90 +1,137 @@
 ﻿'use strict';
 
-/*
-  HW4 - Lotto game (Basic JS + Grid/Flex + Media Queries)
 
-  NOTE (design choice):
-  - This version does NOT use Set. Instead, it uses a plain Array + indexOf() checks
-    to keep the code more conservative (per your request).
-*/
 
-/* === Debugging helper === */
 
-/* Toggle this to quickly enable/disable verbose console logs. */
-var DEBUG = true;
+/* =========================================================
+   Debug helper  : show system winning numbers
+   
+   if DEBUG is true, logs to console the winning strong number and winning numbers.
+   for debugging purposes only.
+   you can disable it by setting DEBUG to false.
+   ========================================================= */
 
-/* Console logger that can be turned off by setting DEBUG = false. */
-function dbg() {
-    if (!DEBUG) return;
-    console.log.apply(console, arguments);
+/* Logs ONLY the system draw (winning strong + winning numbers). */
+/*  Debug prints only when DEBUG is true. */
+
+var DEBUG_WINNERS = true;
+function dbgWinners(where) {
+    if (!DEBUG_WINNERS) return;
+    console.log('[WIN]', where, 'numbers=', game.state.winningNumbers, 'strong=', game.state.winningStrong);
 }
 
-/* === Game state === */
 
-/*
-  We keep all state in one object so it is easy to inspect in Chrome DevTools
-  (Console: type `state` and press Enter).
-*/
-var state = {
-    money: 1000,              /* Player starts with 1000₪ (course requirement) */
-    ticketCost: 300,          /* Each lottery costs 300₪ (course requirement) */
-    round: 1,                 /* How many rounds were played */
-    isGameOver: false,        /* When true: disable all controls */
+/* =========================================================
+   Game model
+   ========================================================= */
 
-    /* User selections */
-    selectedStrong: null,     /* Number between 1-7 */
-    selectedNumbers: [],      /* Array of unique numbers (1-37), length max 6 */
-
-    /* Hidden winning numbers for the current round */
-    winningStrong: null,      /* Number between 1-7 */
-    winningNumbers: []        /* Array of 6 unique numbers (1-37) */
+var game = {
+    config: {
+        ticketCost: 300,
+        startMoney: 1000,
+        maxNumbers: 6,
+        minNumber: 1,
+        maxNumber: 37,
+        minStrong: 1,
+        maxStrong: 7
+    },
+    state: {
+        isStarted: false,
+        isLocked: false,
+        lockMode: null,          /* out of money or plyer end the game */
+        winningNumbers: [],
+        winningStrong: null,
+        validPlays: 0            /* Counts - completed valid plays */
+    },
+    player: {
+        money: 1000,
+        selectedNumbers: [],
+        selectedStrong: null
+    }
 };
 
-/* === Cached DOM elements === */
+/* =========================================================
+   DOM references (cached)
+   ========================================================= */
+
 var els = {
+    /* Stats */
     moneyValue: null,
     ticketCostValue: null,
-    roundValue: null,
-    message: null,
+    playsValue: null,
 
+    /* Boards */
     strongBoard: null,
     numbersBoard: null,
 
+    /* Picks */
     pickedStrong: null,
     pickedNumbers: null,
 
+    /* Controls */
     checkBtn: null,
     finishBtn: null,
 
+    /* Result */
     result: null,
 
-    /* For fast UI updates: store button references by value */
+    /* Alerts */
+    alertHost: null,
+
+    /* Board button maps */
     strongCellsByValue: [],
-    numberCellsByValue: []
+    numberCellsByValue: [],
+
+    /* Modals */
+    welcomeModalEl: null,
+    startGameBtn: null,
+    welcomeModal: null,
+
+    blockModalEl: null,
+    blockModalTitle: null,
+    blockModalMoney: null,
+    blockModalText: null,
+    depositSection: null,
+    depositAmount: null,
+    depositBtn: null,
+    blockCloseBtn: null,
+    blockModal: null
 };
 
-/* === Boot === */
+/* =========================================================
+   Boot
+   ========================================================= */
 
 document.addEventListener('DOMContentLoaded', function () {
-    /* This event fires when the initial HTML document is fully parsed and ready. */
-    dbg('[BOOT] DOMContentLoaded');
 
     cacheElements();
+    initBootstrapModals();
     buildBoards();
     wireEvents();
 
+    /* Initial money */
+    game.player.money = game.config.startMoney;
+
+    /* Render initial UI */
     renderStatus();
-    startNewRound('מוכן. בחר מספר חזק ו-6 מספרים ואז לחץ על "בדיקת הגרלה".');
+    renderPicked();
+    renderSelectionStyles();
+
+    /* Lock controls until the user explicitly starts */
+    setControlsEnabled(false);
+
+    /* Show welcome modal immediately */
+    openWelcomeModal();
 });
 
-/* === Setup helpers === */
+/* =========================================================
+   Setup
+   ========================================================= */
 
 function cacheElements() {
-    /* Grab all required elements once (faster + cleaner than querying repeatedly). */
     els.moneyValue = document.getElementById('moneyValue');
     els.ticketCostValue = document.getElementById('ticketCostValue');
-    els.roundValue = document.getElementById('roundValue');
-    els.message = document.getElementById('message');
+    els.playsValue = document.getElementById('playsValue');
 
     els.strongBoard = document.getElementById('strongBoard');
     els.numbersBoard = document.getElementById('numbersBoard');
@@ -96,454 +143,520 @@ function cacheElements() {
     els.finishBtn = document.getElementById('finishBtn');
 
     els.result = document.getElementById('result');
+    els.alertHost = document.getElementById('alertHost');
 
-    dbg('[cacheElements] done', {
-        moneyValue: !!els.moneyValue,
-        ticketCostValue: !!els.ticketCostValue,
-        roundValue: !!els.roundValue,
-        message: !!els.message,
-        strongBoard: !!els.strongBoard,
-        numbersBoard: !!els.numbersBoard,
-        pickedStrong: !!els.pickedStrong,
-        pickedNumbers: !!els.pickedNumbers,
-        checkBtn: !!els.checkBtn,
-        finishBtn: !!els.finishBtn,
-        result: !!els.result
+    els.welcomeModalEl = document.getElementById('welcomeModal');
+    els.startGameBtn = document.getElementById('startGameBtn');
+
+    els.blockModalEl = document.getElementById('blockModal');
+    els.blockModalTitle = document.getElementById('blockModalTitle');
+    els.blockModalMoney = document.getElementById('blockModalMoney');
+    els.blockModalText = document.getElementById('blockModalText');
+    els.depositSection = document.getElementById('depositSection');
+    els.depositAmount = document.getElementById('depositAmount');
+    els.depositBtn = document.getElementById('depositBtn');
+    els.blockCloseBtn = document.getElementById('blockCloseBtn');
+
+}
+
+function initBootstrapModals() {
+    /* Bootstrap is used only to display modals/alerts nicely. */
+    if (typeof bootstrap === 'undefined') {
+        return;
+    }
+    els.welcomeModal = new bootstrap.Modal(els.welcomeModalEl, { backdrop: 'static', keyboard: false });
+    els.blockModal = new bootstrap.Modal(els.blockModalEl, { backdrop: 'static', keyboard: false });
+}
+
+function wireEvents() {
+    els.checkBtn.addEventListener('click', onCheckLotteryClicked);
+    els.finishBtn.addEventListener('click', onFinishClicked);
+    els.startGameBtn.addEventListener('click', function () {
+
+        game.state.isStarted = true;
+        closeWelcomeModal();
+        startNewRound();
+        dbgWinners('after startNewRound'); // for debugging: show winning numbers
+
+        setControlsEnabled(true);
+        showAlert('Game started. Pick 1 strong number and 6 numbers, then click "Check lottery".', 'info', 4500);
+    });
+
+    els.depositBtn.addEventListener('click', onDepositClicked);
+
+    els.blockCloseBtn.addEventListener('click', function () {
+        /* Closing does not unlock the game. Refresh or deposit (if allowed). */
+        if (els.blockModal) els.blockModal.hide();
     });
 }
 
+/* =========================================================
+   Alerts for the player
+   ========================================================= */
+
+function showAlert(message, type, autoHideMs) {
+    /* type: success | info | warning | danger */
+    var box = document.createElement('div');
+    box.className = 'alert alert-' + type + ' alert-dismissible fade show shadow-sm';
+    box.setAttribute('role', 'alert');
+
+    box.innerHTML =
+        '<div>' + escapeHtml(message) + '</div>' +
+        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>';
+
+    els.alertHost.appendChild(box);
+
+    if (typeof autoHideMs === 'number' && autoHideMs > 0) {
+        setTimeout(function () {
+            try {
+                if (typeof bootstrap !== 'undefined') {
+                    var inst = bootstrap.Alert.getOrCreateInstance(box);
+                    inst.close();
+                } else {
+                    if (box.parentNode) box.parentNode.removeChild(box);
+                }
+            } catch (e) {
+                if (box.parentNode) box.parentNode.removeChild(box);
+            }
+        }, autoHideMs);
+    }
+}
+
+function escapeHtml(s) {
+    var str = String(s);
+    return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+/* =========================================================
+   Modals
+   ========================================================= */
+
+function openWelcomeModal() {
+    if (els.welcomeModal) els.welcomeModal.show();
+    else alert('Welcome to the Lotto Game.');
+}
+
+function closeWelcomeModal() {
+    if (els.welcomeModal) els.welcomeModal.hide();
+}
+
+function openBlockModal(mode, text) {
+ 
+    game.state.isLocked = true;
+    game.state.lockMode = mode;
+
+    updateBlockModalContent(mode, text);
+    setControlsEnabled(false);
+
+    if (els.blockModal) els.blockModal.show();
+    else alert(text + '\nMoney left: ' + game.player.money + '\nRefresh (F5) to restart.');
+
+}
+
+function updateBlockModalContent(mode, text) {
+    els.blockModalMoney.textContent = String(game.player.money);
+    els.blockModalText.textContent = text;
+
+    if (mode === 'OUT_OF_MONEY') {
+        els.blockModalTitle.textContent = 'Not enough money';
+        els.depositSection.style.display = '';
+        els.depositBtn.style.display = '';
+    } else {
+        els.blockModalTitle.textContent = 'Game finished';
+        els.depositSection.style.display = 'none';
+        els.depositBtn.style.display = 'none';
+    }
+}
+
+/* =========================================================
+   Boards (dynamic creation)
+   ========================================================= */
+
 function buildBoards() {
-    /*
-      Create the button grids for:
-      - Strong number: 1..7
-      - Regular numbers: 1..37
-      Buttons are created dynamically so the HTML stays clean and minimal.
-    */
-    dbg('[buildBoards] building strong(1..7) + numbers(1..37)');
-
-    /* --- Strong board --- */
+    /* Strong board */
     clearElement(els.strongBoard);
-    for (var s = 1; s <= 7; s++) {
-        var strongBtn = createCellButton(s);
-        strongBtn.classList.add('cell--strong');
-
-        /* Store reference by value so we can update CSS quickly later */
+    for (var s = game.config.minStrong; s <= game.config.maxStrong; s++) {
+        var strongBtn = createCellButton(s, true);
         els.strongCellsByValue[s] = strongBtn;
 
-        /* Add click handler for strong selection */
-        strongBtn.addEventListener('click', function (ev) {
-            var value = parseInt(ev.currentTarget.dataset.value, 10);
+        strongBtn.addEventListener('click', function (event) {
+            var value = readCellValue(event.currentTarget);
             onStrongClicked(value);
         });
 
         els.strongBoard.appendChild(strongBtn);
     }
 
-    /* --- Numbers board --- */
+    /* Numbers board */
     clearElement(els.numbersBoard);
-    for (var n = 1; n <= 37; n++) {
-        var numberBtn = createCellButton(n);
-        numberBtn.classList.add('cell--number');
-
+    for (var n = game.config.minNumber; n <= game.config.maxNumber; n++) {
+        var numberBtn = createCellButton(n, false);
         els.numberCellsByValue[n] = numberBtn;
 
-        numberBtn.addEventListener('click', function (ev) {
-            var value = parseInt(ev.currentTarget.dataset.value, 10);
+        numberBtn.addEventListener('click', function (event) {
+            var value = readCellValue(event.currentTarget);
             onNumberClicked(value);
         });
 
         els.numbersBoard.appendChild(numberBtn);
     }
+
 }
 
-function wireEvents() {
-    dbg('[wireEvents]');
+function createCellButton(value, isStrong) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
 
-    els.checkBtn.addEventListener('click', onCheckLotteryClicked);
-    els.finishBtn.addEventListener('click', onFinishClicked);
+    /* We keep Bootstrap "btn" for base sizing, but colors are controlled in our CSS for stability. */
+    btn.className = 'cell btn ' + (isStrong ? 'cell--strong' : 'cell--number');
+
+    btn.textContent = String(value);
+
+    /* Conservative approach: use data-value attribute and getAttribute (no dataset dependency). */
+    btn.setAttribute('data-value', String(value));
+
+    return btn;
 }
 
-/* === UI rendering === */
+function readCellValue(buttonEl) {
+    /* Always parse base-10 integer from our data-value attribute. */
+    var raw = buttonEl.getAttribute('data-value');
+    return parseInt(raw, 10);
+}
+
+function clearElement(el) {
+    while (el.firstChild) el.removeChild(el.firstChild);
+}
+
+/* =========================================================
+   Rendering
+   ========================================================= */
 
 function renderStatus() {
-    /* Update top bar values. */
-    els.moneyValue.textContent = state.money + ' ₪';
-    els.ticketCostValue.textContent = state.ticketCost + ' ₪';
-    els.roundValue.textContent = String(state.round);
-
-    dbg('[renderStatus]', { money: state.money, ticketCost: state.ticketCost, round: state.round });
-}
-
-function setMessage(text) {
-    /* Show a message to the player. */
-    els.message.textContent = text;
-    dbg('[message]', text);
+    els.moneyValue.textContent = String(game.player.money);
+    els.ticketCostValue.textContent = String(game.config.ticketCost);
+    els.playsValue.textContent = String(game.state.validPlays);
 }
 
 function renderPicked() {
-    /* Show the user's currently selected numbers on screen (easy to verify). */
-    els.pickedStrong.textContent = state.selectedStrong === null ? '—' : String(state.selectedStrong);
+    els.pickedStrong.textContent = (game.player.selectedStrong === null) ? '—' : String(game.player.selectedStrong);
 
-    if (state.selectedNumbers.length === 0) {
+    if (game.player.selectedNumbers.length === 0) {
         els.pickedNumbers.textContent = '—';
     } else {
-        var sorted = copyAndSort(state.selectedNumbers);
-        els.pickedNumbers.textContent = sorted.join(', ');
+        /* No join(): build string with a loop. */
+        els.pickedNumbers.textContent = arrayToString(game.player.selectedNumbers, ', ');
     }
-
-    dbg('[renderPicked]', {
-        selectedStrong: state.selectedStrong,
-        selectedNumbers: state.selectedNumbers.slice()
-    });
 }
 
 function renderSelectionStyles() {
-    /*
-      Add/remove the 'is-selected' class on each button.
-      This replaces the old Set.has() usage with Array indexOf() checks.
-    */
-    for (var s = 1; s <= 7; s++) {
-        var strongBtn = els.strongCellsByValue[s];
-        var isSelectedStrong = (state.selectedStrong === s);
+    /* Strong selection */
+    for (var s = game.config.minStrong; s <= game.config.maxStrong; s++) {
+        var sb = els.strongCellsByValue[s];
+        if (!sb) continue;
 
-        /* Instead of classList.toggle(..., boolean), we do explicit add/remove. */
-        if (isSelectedStrong) strongBtn.classList.add('is-selected');
-        else strongBtn.classList.remove('is-selected');
+        if (game.player.selectedStrong === s) sb.classList.add('is-selected');
+        else sb.classList.remove('is-selected');
     }
 
-    for (var n = 1; n <= 37; n++) {
-        var numberBtn = els.numberCellsByValue[n];
-        var isSelectedNumber = (state.selectedNumbers.indexOf(n) !== -1);
+    /* Number selection */
+    for (var n = game.config.minNumber; n <= game.config.maxNumber; n++) {
+        var nb = els.numberCellsByValue[n];
+        if (!nb) continue;
 
-        if (isSelectedNumber) numberBtn.classList.add('is-selected');
-        else numberBtn.classList.remove('is-selected');
+        if (indexOfNumber(game.player.selectedNumbers, n) !== -1) nb.classList.add('is-selected');
+        else nb.classList.remove('is-selected');
     }
 }
 
 function setControlsEnabled(isEnabled) {
-    /* Enable/disable all user controls (used when the game ends). */
-    els.checkBtn.disabled = !isEnabled;
-    els.finishBtn.disabled = !isEnabled;
+    /* Controls are enabled only when started and not locked. */
+    var enabled = isEnabled && game.state.isStarted && !game.state.isLocked;
 
-    for (var s = 1; s <= 7; s++) {
-        els.strongCellsByValue[s].disabled = !isEnabled;
+    els.checkBtn.disabled = !enabled;
+    els.finishBtn.disabled = !enabled;
+
+    for (var s = game.config.minStrong; s <= game.config.maxStrong; s++) {
+        if (els.strongCellsByValue[s]) els.strongCellsByValue[s].disabled = !enabled;
     }
 
-    for (var n = 1; n <= 37; n++) {
-        els.numberCellsByValue[n].disabled = !isEnabled;
+    for (var n = game.config.minNumber; n <= game.config.maxNumber; n++) {
+        if (els.numberCellsByValue[n]) els.numberCellsByValue[n].disabled = !enabled;
     }
-
-    dbg('[setControlsEnabled]', isEnabled);
 }
 
-/* === Round lifecycle === */
+/* =========================================================
+   Round lifecycle
+   ========================================================= */
 
-function startNewRound(messageText) {
-    /*
-      Called:
-      - on first load
-      - after each successful 'check' (if player still has money)
-  
-      Requirement:
-      - At the beginning of each lottery, generate and store the winning numbers.
-    */
-    dbg('[startNewRound] round', state.round, 'money', state.money);
-
-    if (state.money < state.ticketCost) {
-        /* Requirement: do not allow playing if not enough money. */
-        endGame('אין מספיק כסף כדי לבצע הגרלה נוספת. המשחק הסתיים. סכום סופי: ' + state.money + ' ₪');
+function startNewRound() {
+    if (game.player.money < game.config.ticketCost) {
+        openBlockModal(
+            'OUT_OF_MONEY',
+            'You cannot continue because you do not have enough money. Deposit to keep playing, or refresh (F5) to restart.'
+        );
         return;
     }
 
-    /* Generate hidden winning numbers for this round. */
-    state.winningNumbers = generateUniqueNumbers(6, 1, 37);
-    state.winningStrong = randomInt(1, 7);
+    /* Winning values are generated at the start of each round (hidden until check). */
+    game.state.winningNumbers = generateUniqueNumbers(6, game.config.minNumber, game.config.maxNumber);
+    game.state.winningStrong = randomInt(game.config.minStrong, game.config.maxStrong);
 
-    dbg('[startNewRound] winningNumbers (hidden)', state.winningNumbers.slice(), 'winningStrong (hidden)', state.winningStrong);
+    /* Reset picks */
+    game.player.selectedStrong = null;
+    game.player.selectedNumbers = [];
 
-    /* Reset user selections. */
-    state.selectedStrong = null;
-    state.selectedNumbers = [];
-
-    renderStatus();
     renderPicked();
     renderSelectionStyles();
-    setControlsEnabled(true);
+    renderStatus();
 
-    setMessage(messageText);
 }
 
-/* === Click handlers === */
+/* =========================================================
+   Click handlers (instant visual feedback)
+   ========================================================= */
 
 function onStrongClicked(value) {
-    if (state.isGameOver) return;
+    if (!game.state.isStarted || game.state.isLocked) return;
 
-    dbg('[onStrongClicked]', value);
+    /* Toggle selection */
+    if (game.player.selectedStrong === value) game.player.selectedStrong = null;
+    else game.player.selectedStrong = value;
 
-    /* Toggle behavior: click again to clear, or click a different number to change selection. */
-    if (state.selectedStrong === value) state.selectedStrong = null;
-    else state.selectedStrong = value;
-
+    /* Immediate UI update (no waiting) */
     renderPicked();
     renderSelectionStyles();
+
 }
 
 function onNumberClicked(value) {
-    if (state.isGameOver) return;
+    if (!game.state.isStarted || game.state.isLocked) return;
 
-    dbg('[onNumberClicked]', value);
-
-    var idx = state.selectedNumbers.indexOf(value);
+    var idx = indexOfNumber(game.player.selectedNumbers, value);
 
     if (idx !== -1) {
-        /* If the number is already selected -> remove it (toggle off). */
-        state.selectedNumbers.splice(idx, 1);
-        dbg('  removed', value, '=>', state.selectedNumbers.slice());
+        /* Toggle off */
+        removeAt(game.player.selectedNumbers, idx);
     } else {
-        /* If not selected, make sure we don't exceed 6 numbers. */
-        if (state.selectedNumbers.length >= 6) {
-            setMessage('אפשר לבחור עד 6 מספרים בלבד. בטל מספר קיים או בחר מספר אחר.');
-            dbg('  blocked: already have 6 numbers');
+        /* Enforce max of 6 */
+        if (game.player.selectedNumbers.length >= game.config.maxNumbers) {
+            showAlert('You can select up to 6 numbers only.', 'warning', 4000);
             return;
         }
-
-        state.selectedNumbers.push(value);
-        dbg('  added', value, '=>', state.selectedNumbers.slice());
+        game.player.selectedNumbers.push(value);
     }
 
+    /* Immediate UI update (no waiting) */
     renderPicked();
     renderSelectionStyles();
+
 }
 
 function onCheckLotteryClicked() {
-    if (state.isGameOver) return;
 
-    dbg('[onCheckLotteryClicked] BEFORE', snapshotStateForDebug());
+    dbgWinners('before check');// for debugging: show winning strong number
 
-    /* Requirement: do not allow playing if not enough money. */
-    if (state.money < state.ticketCost) {
-        endGame('אין מספיק כסף כדי לבצע הגרלה נוספת. המשחק הסתיים. סכום סופי: ' + state.money + ' ₪');
+    if (!game.state.isStarted || game.state.isLocked) return;
+
+    /* Money validation */
+    if (game.player.money < game.config.ticketCost) {
+        openBlockModal(
+            'OUT_OF_MONEY',
+            'You cannot continue because you do not have enough money. Deposit to keep playing, or refresh (F5) to restart.'
+        );
         return;
     }
 
-    /* Requirement: if the form is incomplete, show a message. */
-    if (state.selectedStrong === null || state.selectedNumbers.length !== 6) {
-        setMessage('הטופס לא מלא. חובה לבחור מספר חזק אחד + 6 מספרים שונים (1–37).');
-        dbg('[validation] incomplete', { selectedStrong: state.selectedStrong, count: state.selectedNumbers.length });
+    /* Form validation */
+    if (game.player.selectedStrong === null || game.player.selectedNumbers.length !== game.config.maxNumbers) {
+        showAlert('Incomplete selection: pick 1 strong number and exactly 6 numbers.', 'danger', 4500);
         return;
     }
 
-    /* Deduct the cost of a round. */
-    state.money -= state.ticketCost;
+    /* Ticket payment */
+    game.player.money -= game.config.ticketCost;
 
-    /* Calculate matches. */
-    var matchedCount = countMatches(state.selectedNumbers, state.winningNumbers);
-    var strongMatch = (state.selectedStrong === state.winningStrong);
+    /* This is a VALID play (a complete check was performed). */
+    game.state.validPlays += 1;
 
+    /* Compare results */
+    var matchedCount = countMatches(game.player.selectedNumbers, game.state.winningNumbers);
+    var strongMatch = (game.player.selectedStrong === game.state.winningStrong);
     var prize = calculatePrize(matchedCount, strongMatch);
 
-    /* Add prize to money (could be 0). */
-    state.money += prize;
+    /* Prize payout */
+    game.player.money += prize;
 
-    dbg('[result] matchedCount', matchedCount, 'strongMatch', strongMatch, 'prize', prize, 'moneyAfter', state.money);
-
-    /* Requirement: show results on the page (winning numbers + user picks + success/failure). */
+    /* Render UI */
+    renderStatus();
     renderResult(matchedCount, strongMatch, prize);
 
-    /* Requirement: clean controls (reset) after the round. */
-    state.round += 1;
+    if (prize > 0) showAlert('You won ' + prize + '!', 'success', 4500);
+    else showAlert('No prize this time.', 'info', 2500);
 
-    /* Start next round if possible (this also clears selections). */
-    if (state.money >= state.ticketCost) {
-        startNewRound('סבב חדש מוכן. בחר שוב מספר חזק ו-6 מספרים.');
+    /* Decide next step */
+    if (game.player.money < game.config.ticketCost) {
+        openBlockModal(
+            'OUT_OF_MONEY',
+            'You cannot continue because you do not have enough money. Deposit to keep playing, or refresh (F5) to restart.'
+        );
     } else {
-        endGame('אין מספיק כסף כדי לבצע הגרלה נוספת. המשחק הסתיים. סכום סופי: ' + state.money + ' ₪');
+        startNewRound();
     }
-
-    dbg('[onCheckLotteryClicked] AFTER', snapshotStateForDebug());
 }
 
 function onFinishClicked() {
-    if (state.isGameOver) return;
+    if (!game.state.isStarted || game.state.isLocked) return;
 
-    dbg('[onFinishClicked]');
+    openBlockModal(
+        'FINISHED',
+        'You chose to finish the game. To start again, refresh the page (F5).'
+    );
 
-    /* Requirement: stop the game and prevent more play. */
-    endGame('המשחק הסתיים לפי בקשתך. סכום סופי: ' + state.money + ' ₪');
 }
 
-/* === Result rendering === */
+/* =========================================================
+   Deposit (optional continuation)
+   ========================================================= */
 
-function renderResult(matchedCount, strongMatch, prize) {
-    /* Prepare display values. */
-    var userNumsSorted = copyAndSort(state.selectedNumbers);
-    var winNumsSorted = copyAndSort(state.winningNumbers);
+function onDepositClicked() {
+    if (game.state.lockMode !== 'OUT_OF_MONEY') return;
 
-    var userStrong = state.selectedStrong;
-    var winStrong = state.winningStrong;
+    var amount = parseInt(String(els.depositAmount.value), 10);
 
-    /* Build chips (small styled spans) for both winning and user picks. */
-    var winStrongHtml = chipsHtml([winStrong], [true]); /* winning strong is always shown as neutral */
-    var userStrongHtml = chipsHtml([userStrong], [strongMatch]);
-
-    var winNumsHtml = chipsHtml(winNumsSorted, buildHitArray(winNumsSorted, winNumsSorted)); /* all winning numbers = hit */
-    var userNumsHtml = chipsHtml(userNumsSorted, buildHitArray(userNumsSorted, winNumsSorted));
-
-    var summaryText = '';
-    if (prize > 0) {
-        summaryText = '✅ הצלחה! זכית ב-' + prize + ' ₪';
-    } else {
-        summaryText = '❌ לא זכית הפעם.';
+    if (isNaN(amount) || amount <= 0) {
+        showAlert('Invalid deposit amount.', 'danger', 3500);
+        return;
     }
 
-    var extraText = 'התאמות: ' + matchedCount + ' מספרים' + (strongMatch ? ' + מספר חזק ✅' : ' + מספר חזק ❌');
+    game.player.money += amount;
+    renderStatus();
 
-    /* Update the result container in the DOM. */
-    els.result.innerHTML =
-        '<div class="result-row">' +
-        '<div class="result-label">מספר חזק</div>' +
-        '<div>' +
-        '<div><strong>הוגרל:</strong> <span class="chips">' + winStrongHtml + '</span></div>' +
-        '<div><strong>בחרת:</strong> <span class="chips">' + userStrongHtml + '</span></div>' +
-        '</div>' +
-        '</div>' +
+    /* Unlock and continue if enough */
+    if (game.player.money >= game.config.ticketCost) {
+        game.state.isLocked = false;
+        game.state.lockMode = null;
 
-        '<div class="result-row">' +
-        '<div class="result-label">מספרים</div>' +
-        '<div>' +
-        '<div><strong>הוגרלו:</strong> <span class="chips">' + winNumsHtml + '</span></div>' +
-        '<div><strong>בחרת:</strong> <span class="chips">' + userNumsHtml + '</span></div>' +
-        '</div>' +
-        '</div>' +
+        if (els.blockModal) els.blockModal.hide();
 
-        '<div class="result-row">' +
-        '<div class="result-label">סיכום</div>' +
-        '<div>' +
-        '<div>' + summaryText + '</div>' +
-        '<div>' + extraText + '</div>' +
-        '<div>כסף נוכחי: <strong>' + state.money + ' ₪</strong></div>' +
-        '</div>' +
-        '</div>';
+        showAlert('Deposit added. You can continue playing.', 'success', 3000);
 
-    dbg('[renderResult] done');
+        startNewRound();
+        setControlsEnabled(true);
+    } else {
+        updateBlockModalContent('OUT_OF_MONEY', 'Still not enough money. Deposit more, or refresh (F5) to restart.');
+    }
 }
 
-/* === Prize rules === */
+/* =========================================================
+   Result rendering 
+   ========================================================= */
+function renderResult(matchedCount, strongMatch, prize) {
+    var userNums = copyArray(game.player.selectedNumbers);
+    var winNums = copyArray(game.state.winningNumbers);
 
+    var userStrong = game.player.selectedStrong;
+    var winStrong = game.state.winningStrong;
+
+    var userHits = buildHitArray(userNums, winNums);
+
+    /* result divs:*/
+    var strongText = strongMatch ? 'Matched' : 'Not matched';
+
+    els.result.innerHTML =
+        '<div><strong>Winning strong:</strong> ' + chipsHtml([winStrong]) + '</div>' +
+        '<div><strong>Your strong:</strong> ' + chipsHtml([userStrong], [strongMatch]) + '</div>' +
+        '<div class="mt-2"><strong>Winning numbers:</strong> ' + chipsHtml(winNums) + '</div>' +
+        '<div><strong>Your numbers:</strong> ' + chipsHtml(userNums, userHits) + '</div>' +
+        '<div><strong>Round Summary :</div>' +
+        '<div><strong>Successful guesses :</strong> ' + matchedCount + '</div > ' + 
+        '<div><strong>Strong number :</strong> ' + strongText + '</div > ' + 
+        '<div><strong>Prize :</strong> ' + prize + '</div > ' + 
+        '<div><strong>Money now:</strong> ' + game.player.money + '</div>';
+}
+
+function chipsHtml(values, hitFlags) {
+    /* If hitFlags is missing, treat all as "neutral" (success style) for display simplicity. */
+    var html = '';
+    for (var i = 0; i < values.length; i++) {
+        var isHit = true;
+        if (hitFlags && typeof hitFlags[i] !== 'undefined') isHit = !!hitFlags[i];
+
+        var cls = isHit ? 'text-bg-success' : 'text-bg-secondary';
+        html += '<span class="badge rounded-pill ' + cls + ' badge-space">' + values[i] + '</span>';
+    }
+    return html;
+}
+
+
+/* Prize rules*/
 function calculatePrize(matchedCount, strongMatch) {
-    /*
-      Prize rules (course requirement):
-      1) 6 matches + strong => 1000
-      2) 6 matches (no strong) => 600
-      3) 4 matches + strong => 400
-      4) Anything else => 0
-      NOTE: player can win only one prize per round.
-    */
     if (matchedCount === 6 && strongMatch) return 1000;
     if (matchedCount === 6 && !strongMatch) return 600;
     if (matchedCount === 4 && strongMatch) return 400;
     return 0;
 }
 
-/* === Utilities (no Set) === */
+/* =========================================================
+   Utilities - build the page lottery 
+   ========================================================= */
 
 function generateUniqueNumbers(count, min, max) {
-    /*
-      Generates `count` unique random integers between min..max (inclusive),
-      WITHOUT using Set (uses Array + indexOf()).
-    */
     var arr = [];
     while (arr.length < count) {
         var n = randomInt(min, max);
-        if (arr.indexOf(n) === -1) arr.push(n);
+        if (indexOfNumber(arr, n) === -1) arr.push(n);
     }
     return arr;
 }
 
 function randomInt(min, max) {
-    /* Returns an integer in the range [min, max]. */
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 function countMatches(userArr, winArr) {
-    /* Counts how many values from userArr appear inside winArr (no Set). */
     var count = 0;
     for (var i = 0; i < userArr.length; i++) {
-        if (winArr.indexOf(userArr[i]) !== -1) count += 1;
+        if (indexOfNumber(winArr, userArr[i]) !== -1) count += 1;
     }
     return count;
 }
 
-function copyAndSort(arr) {
-    /* Copy an array and sort numerically ascending. */
-    var copy = arr.slice();
-    copy.sort(function (a, b) { return a - b; });
-    return copy;
-}
-
 function buildHitArray(valuesToMark, winValues) {
-    /*
-      Returns an array of booleans aligned with valuesToMark:
-      true if the value is inside winValues, else false.
-    */
     var hits = [];
     for (var i = 0; i < valuesToMark.length; i++) {
-        hits.push(winValues.indexOf(valuesToMark[i]) !== -1);
+        hits.push(indexOfNumber(winValues, valuesToMark[i]) !== -1);
     }
     return hits;
 }
 
-function chipsHtml(values, hitFlags) {
-    /*
-      Build small HTML spans for each number.
-      hitFlags[i] === true -> "hit" styling
-    */
-    var html = '';
-    for (var i = 0; i < values.length; i++) {
-        var cls = hitFlags[i] ? 'chip hit' : 'chip miss';
-        html += '<span class="chip ' + (hitFlags[i] ? 'hit' : 'miss') + '">' + values[i] + '</span>';
+function indexOfNumber(arr, value) {
+    for (var i = 0; i < arr.length; i++) {
+        if (arr[i] === value) return i;
     }
-    return html;
+    return -1;
 }
 
-function createCellButton(value) {
-    /* Create a clickable number button with dataset value. */
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'cell';
-    btn.textContent = String(value);
-
-    /* dataset.value keeps the number on the element so click handlers can read it. */
-    btn.dataset.value = String(value);
-
-    return btn;
+function copyArray(arr) {
+    var copy = [];
+    for (var i = 0; i < arr.length; i++) copy.push(arr[i]);
+    return copy;
 }
 
-function clearElement(el) {
-    /* Remove all child nodes from an element. */
-    while (el.firstChild) el.removeChild(el.firstChild);
+function arrayToString(arr, sep) {
+    var s = '';
+    for (var i = 0; i < arr.length; i++) {
+        if (i > 0) s += sep;
+        s += String(arr[i]);
+    }
+    return s;
 }
 
-function endGame(finalMessage) {
-    /* End the game and disable all controls. */
-    state.isGameOver = true;
-    setControlsEnabled(false);
-    renderStatus();
-    setMessage(finalMessage);
-
-    dbg('[endGame]', finalMessage, snapshotStateForDebug());
+function removeAt(arr, idx) {
+    /* Remove one element without splice() */
+    for (var i = idx; i < arr.length - 1; i++) {
+        arr[i] = arr[i + 1];
+    }
+    arr.pop();
 }
 
-function snapshotStateForDebug() {
-    /* A small safe snapshot for console logging. */
-    return {
-        money: state.money,
-        ticketCost: state.ticketCost,
-        round: state.round,
-        isGameOver: state.isGameOver,
-        selectedStrong: state.selectedStrong,
-        selectedNumbers: state.selectedNumbers.slice(),
-        winningStrong: state.winningStrong,
-        winningNumbers: state.winningNumbers.slice()
-    };
-}

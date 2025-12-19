@@ -1,274 +1,268 @@
 ﻿
-*{
 
-    box-sizing: border-box;
-}
+/* ---------- Base (Phone) ---------- */
 
 body {
-    margin: 0; /* Remove default browser margins */
-    font-family: system-ui, Arial, sans-serif;
-    line-height: 1.4;
-    background: #f6f7fb;
-    color: #1f2937;
-}
-
-/* --- Header --- */
-.app-header {
-    padding: 16px;
-    background: #ffffff;
-    border-bottom: 1px solid #e5e7eb;
-}
-
-.app-title {
-    margin: 0 0 12px 0;
-    font-size: 1.4rem;
-}
-
-.status-bar {
-    display: flex; /* Flex: place status items in a row */
-    flex-wrap: wrap; /* Wrap on smaller screens */
-    gap: 10px;
-    align-items: center;
-    margin-bottom: 10px;
-}
-
-.status-item {
-    display: flex;
-    gap: 6px;
-    background: #f3f4f6;
-    padding: 6px 10px;
-    border-radius: 10px;
-}
-
-.status-label {
-    opacity: 0.8;
-}
-
-.status-value {
-    font-weight: 700;
-}
-
-.message {
     margin: 0;
-    padding: 10px 12px;
-    background: #0f172a;
-    color: #ffffff;
-    border-radius: 12px;
+    font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    background: #f6f7fb;
+    color: #111;
+    
 }
 
-/* --- Main layout (Grid) --- */
-.layout {
-    display: grid; /* Grid: primary page layout */
-    grid-template-columns: 1fr; /* Mobile-first: single column */
-    gap: 14px;
-    padding: 14px;
+/* Centered page container */
+.page {
+    padding: 18px;
 }
 
-/* --- Panels --- */
-.panel {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 12px;
+/* Centered header: title + stats */
+.topbar {
+    display: flex ;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
 }
 
-.panel-title {
-    margin: 0 0 10px 0;
-    font-size: 1.1rem;
+.title {
+    margin: 10px;
+    font-size: 3rem;
+    text-align: center;
 }
 
-/* --- Boards (Grid) --- */
-.board {
-    display: grid; /* Grid: the clickable number boards */
-    gap: 8px;
-}
-
-.board--strong {
-    grid-template-columns: repeat(7, 1fr);
-}
-
-.board--numbers {
-    grid-template-columns: repeat(6, 1fr); /* Mobile default: 6 columns */
-}
-
-/* --- Cell buttons --- */
-.cell {
-    appearance: none;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 10px 0;
-    font-weight: 700;
-    cursor: pointer;
-    user-select: none;
-}
-
-    .cell:hover {
-        border-color: #111827;
-    }
-
-    .cell.is-selected {
-        background: #111827;
-        color: #ffffff;
-        border-color: #111827;
-    }
-
-    .cell:disabled {
-        opacity: 0.45;
-        cursor: not-allowed;
-    }
-
-/* --- Picked values --- */
-.picked {
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 12px;
-    background: #f3f4f6;
+.stats {
     display: flex;
-    gap: 10px;
+    gap: 25px;
     flex-wrap: wrap;
+    justify-content: center;
+
 }
 
-.picked-label {
-    opacity: 0.8;
+.stat {
+    font-size: 1.4rem;
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 12px;
+    padding: 10px 12px;
+    display: flex;
+    gap: 8px;
+    align-items: baseline;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.04);
+}
+.stat.label {
+        color: #555;
+    }
+
+.stat .value {
+    font-weight: 800;
+    font-size: 1.6rem;
 }
 
-.picked-value {
-    font-weight: 700;
+/* Main layout: one column on phone */
+.layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
 }
 
-/* --- Actions --- */
+.panel {
+    background: #fff;
+    border: 1px solid rgba(0,0,0,0.08);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 2px 14px rgba(0,0,0,0.05);
+   
+}
+
+.panelTitle {
+    padding: inherit;
+    font-size: 1.5rem;
+    text-align: center;
+}
+
+.divider {
+    border: 0;
+    border-top: 1px solid rgba(0,0,0,0.08);
+    margin: 12px 0;
+}
+
+/* Boards use Grid. Phone: fewer columns, bigger buttons, less crowding. */
+.board {
+    display: grid;
+    gap: 12px;
+}
+
+/* Phone columns */
+.board-strong {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.board-numbers {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+/* Buttons: custom styling */
+.cell {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    border-radius: 14px !important;
+    font-weight: 800;
+    font-size: 1.75rem;
+    /* Prevent "tap delay" feel and highlight artifacts */
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    /* Override Bootstrap active/focus behaviors to avoid a second color change */
+    box-shadow: none !important;
+}
+
+/* Phone */
+.cell--number {
+    --accent: #6f42c1;
+}
+
+.cell--strong {
+    --accent: #fd7e14;
+}
+
+.cell {
+    background: transparent !important;
+    border: 2px solid var(--accent) !important;
+    color: var(--accent) !important;
+    font-size: 1.75rem;
+}
+
+    /* Remove Bootstrap focus ring / active shading so selected state is consistent */
+    .cell:focus,
+    .cell:focus-visible,
+    .cell:active {
+        outline: none !important;
+        box-shadow: none !important;
+        background: transparent !important;
+        color: var(--accent) !important;
+    }
+
+/* Selected state is always the same (no surprises after clicking elsewhere) */
+.is-selected {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+}
+
+/* Ensure selected style wins even while the button is focused/active */
+.cell.is-selected,
+.cell.is-selected:focus,
+.cell.is-selected:focus-visible,
+.cell.is-selected:active {
+    background: var(--accent) !important;
+    border-color: var(--accent) !important;
+    color: #fff !important;
+}
+
+/* result panel */
+.pickedRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 10px;
+    padding: 8px 0;
+}
+
+.pickedLabel {
+    color: #666;
+    font-size: 1.5rem;
+}
+
+.pickedValue {
+    font-weight: 800;
+    font-size: 1.5rem;
+}
+
 .actions {
     display: flex;
     gap: 10px;
-    flex-wrap: wrap;
+    margin-top: 10px;
 }
 
-.btn {
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 10px 12px;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-    .btn:hover {
-        border-color: #111827;
+    .actions .btn {
+        flex: 1;
+        font-size: 2rem;
     }
 
-.btn--primary {
-    background: #111827;
-    color: #ffffff;
-    border-color: #111827;
+.resultBox {
+    line-height: 1.7;
+    color: #222;
 }
 
-.btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+div.resultBox {
+    margin-top: 10px;
+    font-size: 1.35rem;
+
 }
 
-/* --- Result area --- */
-.result-box {
-    margin-top: 12px;
-    padding-top: 12px;
-    border-top: 1px solid #e5e7eb;
+.badge-space {
+    display: inline-block;
+    margin-right: 6px;
+    margin-bottom: 6px;
 }
 
-.result-title {
-    margin: 0 0 10px 0;
-    font-size: 1rem;
-}
+/*---------- Above Phone (>= 480px) ---------- */
+@media screen and (min-width: 480px) {
 
-.result {
-    background: #f3f4f6;
-    border-radius: 12px;
-    padding: 12px;
-}
-
-.result-row {
-    display: grid; /* Grid: label + 2 values */
-    grid-template-columns: 110px 1fr;
-    gap: 10px;
-    margin-bottom: 10px;
-}
-
-    .result-row:last-child {
-        margin-bottom: 0;
+    /*     More columns because there is more space */
+    .board-strong {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
     }
 
-.result-label {
-    opacity: 0.8;
-}
-
-.chips {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.chip {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 38px;
-    padding: 6px 10px;
-    border-radius: 999px;
-    border: 1px solid #d1d5db;
-    background: #ffffff;
-    font-weight: 700;
-}
-
-    .chip.hit {
-        background: #111827;
-        color: #ffffff;
-        border-color: #111827;
+    .board-numbers {
+        /*        grid-template-columns: repeat(9, minmax(0, 1fr));
+*/ grid-template-columns: repeat(6, minmax(0, 1fr));
     }
 
-    .chip.miss {
-        opacity: 0.75;
+    /*     Slightly smaller buttons/text than phone */
+    .cell {
+        font-size: 2rem;
     }
 
-/* --- Footer --- */
-.app-footer {
-    padding: 14px;
-    text-align: center;
-    color: #6b7280;
-}
-
-/* --- Responsive rules (Media Queries) --- */
-
-/* Tablet: increase columns for the main numbers board */
-@media screen and (min-width: 720px) {
-    .layout {
-        grid-template-columns: 1fr 1fr; /* Two columns layout */
-        align-items: start;
-    }
-
-    .panel--numbers {
-        grid-column: 1 / -1; /* Make numbers panel full width on tablet */
-    }
-
-    .board--numbers {
-        grid-template-columns: repeat(9, 1fr);
-    }
-
-    .result-row {
-        grid-template-columns: 140px 1fr;
+    /* Tablet and above: restore distinct colors (blue for numbers, orange for strong) */
+    .cell--number {
+        --accent: #0d6efd;
     }
 }
 
-/* Desktop: 3-column layout */
-@media screen and (min-width: 1024px) {
-    .layout {
-        grid-template-columns: 320px 1fr 360px;
+    /* ---------- Above tablet (>= 1024px) ---------- */
+    @media screen and (min-width: 1024px) {
+        .board-numbers {
+            grid-template-columns: repeat(8, minmax(0, 1fr));
+        }
+
+        .cell {
+            font-size: 2rem;
+        }
+        /*Two-column layout on tablet and above*/
+        .layout {
+            grid-template-columns: 1.5fr 1fr;
+            align-items: start;
+        }
+
+        .panelTitle {
+            /*padding: inherit;*/
+            font-size: 2.25rem;
+            /*text-align: center;*/
+        }
+
+        .pickedLabel {
+            font-size: 2rem;
+        }
+
+        .pickedValue {
+            font-weight: 800;
+            font-size: 2.25rem;
+        }
+
+        div.resultBox {
+            margin-top: 10px;
+            font-size: 2rem;
+        }
     }
 
-    .panel--numbers {
-        grid-column: auto; /* Back to normal flow */
-    }
 
-    .board--numbers {
-        grid-template-columns: repeat(10, 1fr);
-    }
-}

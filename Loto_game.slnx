@@ -2,7 +2,7 @@
   <Configurations>
     <BuildType Name="Debug" />
   </Configurations>
-  <Project Path="." Type="Website" DisplayName="FRONTED">
+  <Project Path="." Type="Website" DisplayName="FRONTED" Id="7eea7366-997b-4596-9b71-223606af3788">
     <Properties Name="WebsiteProperties">
       <Property Name="Debug.AspNetCompiler.Debug" Value="&quot;True&quot;" />
       <Property Name="Debug.AspNetCompiler.FixedNames" Value="&quot;false&quot;" />
